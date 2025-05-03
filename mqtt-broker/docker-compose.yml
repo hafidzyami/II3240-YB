@@ -13,8 +13,8 @@ services:
       - ./mqtt/log:/mosquitto/log
     restart: always
     networks:
-      - mqtt-network
+      - iot-network
 
 networks:
-  mqtt-network:
+  iot-network:
     driver: bridge

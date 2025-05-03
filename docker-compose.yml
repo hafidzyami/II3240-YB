@@ -52,7 +52,7 @@ services:
       - "1883:1883" # MQTT default port
       - "9001:9001" # WebSockets port
     networks:
-      - getstok-network
+      - iot-network
 
 networks:
   iot-network:

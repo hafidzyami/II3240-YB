@@ -13,6 +13,7 @@ import {
   TimeScale,
   ChartData,
   ChartOptions,
+  ScatterDataPoint,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { IoTData } from "../types/iot";
@@ -81,9 +82,9 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
     datasets: [
       {
         label,
-        data: filteredData.length > 0 ? filteredData.map((item) => ({
-          x: new Date(item.timestamp),
-          y: item[dataKey],
+        data: filteredData.length > 0 ? filteredData.map((item): ScatterDataPoint => ({
+          x: new Date(item.timestamp).getTime(),
+          y: item[dataKey] as number,
         })) : [],
         borderColor,
         backgroundColor: (context) => {
@@ -154,7 +155,6 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
         max: maxTime.getTime(),
         time: {
           unit: "second",
-          stepSize: 20,
           displayFormats: {
             second: "HH:mm:ss",
             minute: "HH:mm",
