@@ -15,6 +15,8 @@ const IoTDashboard: React.FC = () => {
   const [latestData, setLatestData] = useState<IoTData | null>(null);
   const [dataHistory, setDataHistory] = useState<IoTData[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [wsErrorReason, setWsErrorReason] = useState<string | null>(null);
+
 
   useEffect(() => {
     const loadHistoricalData = async () => {
@@ -71,11 +73,13 @@ const IoTDashboard: React.FC = () => {
       newSocket.on("disconnect", (reason) => {
         console.log("Disconnected from Socket.IO server:", reason);
         setWsStatus("disconnected");
+        setWsErrorReason(reason); 
       });
 
       newSocket.on("connect_error", (error) => {
         console.error("Socket.IO connection error:", error);
         setWsStatus("disconnected");
+        setWsErrorReason(error.message || "Unknown error"); 
       });
 
       newSocket.on("reconnect", (attemptNumber) => {
@@ -120,7 +124,7 @@ const IoTDashboard: React.FC = () => {
           ? "🟢 Connected to IoT server"
           : wsStatus === "connecting"
           ? "🟡 Connecting to IoT server..."
-          : "🔴 Disconnected from IoT server - Reconnecting..."}
+          : `🔴 Disconnected from IoT server - Reconnecting... (${wsErrorReason ?? "No reason provided"})`}
       </div>
 
       {/* Control Panel */}
