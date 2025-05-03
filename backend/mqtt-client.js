@@ -9,6 +9,7 @@ const API_URL = `http://localhost:${process.env.PORT || 8000}/api/iot`;
 
 // WebSocket server reference (will be set from index.js)
 let wsServer = null;
+let nativeWsServer = null;
 
 // Function to set WebSocket server
 function setWebSocketServer(server) {
@@ -34,6 +35,43 @@ function setWebSocketServer(server) {
   if (wsServer && wsServer.setServoCommandCallback) {
     wsServer.setServoCommandCallback((data) => {
       console.log('Publishing Servo command to MQTT:', data);
+      
+      // Publish to MQTT topic
+      client.publish('reksti-yb/servo', data.angle.toString(), (err) => {
+        if (err) {
+          console.error('Failed to publish Servo command:', err);
+        } else {
+          console.log('Servo command published successfully to reksti-yb/servo with angle:', data.angle);
+        }
+      });
+    });
+  }
+}
+
+// Function to set Native WebSocket server
+function setNativeWebSocketServer(server) {
+  nativeWsServer = server;
+  
+  // Set up LED command callback
+  if (nativeWsServer && nativeWsServer.setLedCommandCallback) {
+    nativeWsServer.setLedCommandCallback((data) => {
+      console.log('Publishing LED command to MQTT from native WS:', data);
+      
+      // Publish to MQTT topic
+      client.publish('reksti-yb/led', data.state.toString(), (err) => {
+        if (err) {
+          console.error('Failed to publish LED command:', err);
+        } else {
+          console.log('LED command published successfully to reksti-yb/led');
+        }
+      });
+    });
+  }
+  
+  // Set up Servo command callback
+  if (nativeWsServer && nativeWsServer.setServoCommandCallback) {
+    nativeWsServer.setServoCommandCallback((data) => {
+      console.log('Publishing Servo command to MQTT from native WS:', data);
       
       // Publish to MQTT topic
       client.publish('reksti-yb/servo', data.angle.toString(), (err) => {
@@ -128,6 +166,11 @@ client.on('message', async (topic, message) => {
         });
       }
       
+      // Also broadcast to Native WebSocket clients
+      if (nativeWsServer) {
+        nativeWsServer.broadcast(response.data.data);
+      }
+      
     } catch (apiError) {
       console.error('Failed to post data to API:', apiError.message);
       if (apiError.response) {
@@ -143,5 +186,6 @@ client.on('message', async (topic, message) => {
 // Export the client and setter function
 module.exports = {
   client,
-  setWebSocketServer
+  setWebSocketServer,
+  setNativeWebSocketServer
 };
