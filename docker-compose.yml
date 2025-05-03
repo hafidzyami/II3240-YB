@@ -46,7 +46,7 @@ services:
   mqtt-broker:
     build:
       context: ./mqtt-broker # Menggunakan context dari direktori mqtt_broker
-    container_name: getstok-mqtt
+    container_name: mqtt-broker
     restart: unless-stopped
     ports:
       - "1883:1883" # MQTT default port
