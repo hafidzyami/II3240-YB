@@ -4,9 +4,13 @@ class SocketServer {
   constructor(server) {
     this.io = new Server(server, {
       cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-      }
+        origin: process.env.FRONTEND_URL || "*",
+        methods: ["GET", "POST"],
+        credentials: true,
+        allowedHeaders: ["*"]
+      },
+      allowEIO3: true,
+      transports: ['websocket', 'polling']
     });
     
     this.clients = new Set();

@@ -36,7 +36,7 @@ const IoTDashboard: React.FC = () => {
 
   const connectSocket = () => {
     try {
-      const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
       const newSocket = io(socketUrl, {
         transports: ["websocket", "polling"],
         reconnection: true,
