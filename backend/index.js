@@ -9,7 +9,6 @@ require('dotenv').config();
 // Import MQTT client
 const { client: mqttClient, setWebSocketServer } = require('./mqtt-client');
 const SocketServer = require('./socket-server');
-const NativeWebSocketServer = require('./websocket/native-websocket');
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -20,15 +19,8 @@ const server = http.createServer(app);
 // Initialize Socket.IO server
 const socketServer = new SocketServer(server);
 
-// Initialize Native WebSocket server
-const nativeWsServer = new NativeWebSocketServer(server);
-
 // Set Socket.IO server reference in MQTT client
 setWebSocketServer(socketServer);
-
-// Also set Native WebSocket server for broadcasting
-const { setNativeWebSocketServer } = require('./mqtt-client');
-setNativeWebSocketServer(nativeWsServer);
 
 // Middleware
 app.use(cors({
