@@ -16,34 +16,51 @@ const IoTDashboard: React.FC = () => {
   const [dataHistory, setDataHistory] = useState<IoTData[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [wsErrorReason, setWsErrorReason] = useState<string | null>(null);
-
+  const [currentTime, setCurrentTime] = useState<string>("");
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     const loadHistoricalData = async () => {
       const historicalData = await fetchHistoricalData();
       setDataHistory(historicalData.slice(0, 50)); // Get last 50 records
     };
 
     loadHistoricalData();
-    connectSocket();
+    
+    // Update time on client side only
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    };
+    updateTime();
+    const timeInterval = setInterval(updateTime, 1000);
 
     return () => {
       if (socket) {
         socket.disconnect();
       }
+      clearInterval(timeInterval);
     };
   }, []);
 
+  useEffect(() => {
+    if (isMounted) {
+      connectSocket();
+    }
+  }, [isMounted]);
+
+
+
   const connectSocket = () => {
     try {
-      const socketUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
-      const newSocket = io(socketUrl, {
-        transports: ["websocket", "polling"],
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-      });
+      // Use environment variable or dynamic host
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+                       (typeof window !== 'undefined' 
+                         ? `${window.location.protocol}//${window.location.hostname}:8000` 
+                         : 'http://localhost:8000');
+      
+      const newSocket = io(socketUrl);
 
       newSocket.on("connect", () => {
         console.log("Connected to Socket.IO server");
@@ -73,13 +90,13 @@ const IoTDashboard: React.FC = () => {
       newSocket.on("disconnect", (reason) => {
         console.log("Disconnected from Socket.IO server:", reason);
         setWsStatus("disconnected");
-        setWsErrorReason(reason); 
+        setWsErrorReason(reason);
       });
 
       newSocket.on("connect_error", (error) => {
         console.error("Socket.IO connection error:", error);
         setWsStatus("disconnected");
-        setWsErrorReason(error.message || "Unknown error"); 
+        setWsErrorReason(error.message || "Unknown error");
       });
 
       newSocket.on("reconnect", (attemptNumber) => {
@@ -100,19 +117,19 @@ const IoTDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-8 gap-2">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
           IoT Monitoring Dashboard
         </h1>
-        <div className="text-sm text-gray-500">
-          {new Date().toLocaleTimeString()}
+        <div className="text-xs sm:text-sm text-gray-500">
+          {currentTime}
         </div>
       </div>
 
       {/* Connection Status */}
       <div
-        className={`mb-6 p-4 rounded-lg ${
+        className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg text-sm sm:text-base ${
           wsStatus === "connected"
             ? "bg-green-100 text-green-800"
             : wsStatus === "connecting"
@@ -124,52 +141,66 @@ const IoTDashboard: React.FC = () => {
           ? "🟢 Connected to IoT server"
           : wsStatus === "connecting"
           ? "🟡 Connecting to IoT server..."
-          : `🔴 Disconnected from IoT server - Reconnecting... (${wsErrorReason ?? "No reason provided"})`}
+          : `🔴 Disconnected from IoT server - Reconnecting... (${
+              wsErrorReason ?? "No reason provided"
+            })`}
       </div>
 
       {/* Control Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <LedControl socket={socket} />
         <ServoControl socket={socket} />
       </div>
-      
+
       {/* Latest Reading Card */}
       {latestData && (
-        <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300 mb-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Latest Readings</h2>
-          <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow duration-300 mb-6 sm:mb-8">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">
+            Latest Readings
+          </h2>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">
                 {latestData.temperature.toFixed(1)}°
               </div>
-              <div className="text-sm text-gray-500 mt-1">Temperature</div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-1">Temperature</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">
                 {latestData.humidity.toFixed(1)}%
               </div>
-              <div className="text-sm text-gray-500 mt-1">Humidity</div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-1">Humidity</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600">
                 {latestData.pressure.toFixed(0)}
               </div>
-              <div className="text-sm text-gray-500 mt-1">Pressure</div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-1">Pressure</div>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center text-sm text-gray-500">
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+            <div className="flex items-center text-xs sm:text-sm text-gray-500">
+              <svg
+                className="w-3 h-3 sm:w-4 sm:h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              {new Date(latestData.timestamp).toLocaleString()}
+              {isMounted ? new Date(latestData.timestamp).toLocaleString() : ""}
             </div>
           </div>
         </div>
       )}
 
       {/* Charts */}
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6">
         <AnimatedRealtimeChart
           data={dataHistory}
           dataKey="temperature"

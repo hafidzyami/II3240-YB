@@ -1,6 +1,19 @@
 import { IoTData } from "../types/iot";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Get API base URL dynamically
+const getApiBaseUrl = (): string => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  
+  return 'http://localhost:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 const API_ENDPOINT = `${API_BASE_URL}/api`;
 
 export const fetchHistoricalData = async (): Promise<IoTData[]> => {

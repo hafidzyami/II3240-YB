@@ -52,23 +52,42 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
   unit = "",
 }) => {
   const chartRef = useRef<ChartJS<"line">>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [timeString, setTimeString] = useState<string>("");
+  const [isMounted, setIsMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Update current time every second
   useEffect(() => {
+    setIsMounted(true);
+    setCurrentTime(new Date());
+    
+    // Check if mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
+      const now = new Date();
+      setCurrentTime(now);
+      setTimeString(now.toLocaleTimeString());
     }, 1000);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
 
 
   // Create a moving window of 3 minutes for better visibility
   const windowMinutes = 3;
-  const minTime = new Date(currentTime.getTime() - windowMinutes * 60 * 1000);
-  const maxTime = new Date(currentTime.getTime() + 5000); // Add 5 seconds buffer to the right
+  const currentTimeMs = currentTime ? currentTime.getTime() : Date.now();
+  const minTime = new Date(currentTimeMs - windowMinutes * 60 * 1000);
+  const maxTime = new Date(currentTimeMs + 5000); // Add 5 seconds buffer to the right
   
   // Filter data to only show within the time window
   const filteredData = data.filter(item => {
@@ -135,10 +154,17 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: '#fff',
         bodyColor: '#fff',
-        padding: 12,
+        padding: isMobile ? 8 : 12,
         displayColors: false,
+        titleFont: {
+          size: isMobile ? 10 : 12,
+        },
+        bodyFont: {
+          size: isMobile ? 10 : 12,
+        },
         callbacks: {
           title: (tooltipItems) => {
+            if (!isMounted) return '';
             const date = new Date(tooltipItems[0].parsed.x);
             return date.toLocaleString();
           },
@@ -166,10 +192,10 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
         },
         ticks: {
           maxRotation: 0,
-          autoSkip: false,
-          maxTicksLimit: 10,
+          autoSkip: true,
+          maxTicksLimit: isMobile ? 5 : 10,
           font: {
-            size: 11,
+            size: isMobile ? 9 : 11,
           },
           color: 'rgba(0, 0, 0, 0.6)',
         },
@@ -181,8 +207,9 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
         },
         ticks: {
           font: {
-            size: 12,
+            size: isMobile ? 10 : 12,
           },
+          maxTicksLimit: isMobile ? 6 : 8,
           callback: (value) => `${value}${unit}`,
         },
       },
@@ -200,24 +227,24 @@ const AnimatedRealtimeChart: React.FC<AnimatedRealtimeChartProps> = ({
   }, [data, currentTime, minTime, maxTime]);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">{label}</h3>
-        <div className="flex items-center space-x-4">
+    <div className="bg-white rounded-xl shadow-lg p-3 sm:p-6 hover:shadow-xl transition-shadow duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800">{label}</h3>
+        <div className="flex items-center justify-between sm:justify-start sm:space-x-4">
           {data.length > 0 && (
             <div className="flex items-center space-x-2">
-              <span className="text-2xl font-bold" style={{ color: borderColor }}>
+              <span className="text-lg sm:text-2xl font-bold" style={{ color: borderColor }}>
                 {data[0][dataKey].toFixed(1)}{unit}
               </span>
-              <span className="text-sm text-gray-500">Current</span>
+              <span className="text-xs sm:text-sm text-gray-500 hidden sm:inline">Current</span>
             </div>
           )}
-          <div className="text-sm text-gray-400">
-            {currentTime.toLocaleTimeString()}
+          <div className="text-xs sm:text-sm text-gray-400">
+            {timeString}
           </div>
         </div>
       </div>
-      <div className="h-64 relative">
+      <div className="h-48 sm:h-64 relative">
         <Line ref={chartRef} data={chartData} options={options} />
       </div>
     </div>

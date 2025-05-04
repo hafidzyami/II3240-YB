@@ -31,11 +31,11 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">LED Control</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">LED Control</h3>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Toggle the LED on your IoT device
           </p>
         </div>
@@ -43,7 +43,7 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
           onClick={toggleLed}
           disabled={isLoading || !socket?.connected}
           className={`
-            relative px-6 py-3 rounded-lg font-medium transition-all duration-300 transform
+            relative px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 transform w-full sm:w-auto
             ${
               ledState
                 ? "bg-green-500 hover:bg-green-600 text-white shadow-green-200"
@@ -75,12 +75,12 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
       </div>
       
       {/* Status Indicator */}
-      <div className="mt-4 flex items-center space-x-2">
+      <div className="mt-3 sm:mt-4 flex items-center space-x-2">
         <div className={`
           w-2 h-2 rounded-full
           ${socket?.connected ? "bg-green-500 animate-pulse" : "bg-red-500"}
         `} />
-        <span className="text-sm text-gray-600">
+        <span className="text-xs sm:text-sm text-gray-600">
           {socket?.connected ? "Connected to server" : "Disconnected"}
         </span>
       </div>
