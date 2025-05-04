@@ -130,98 +130,196 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
-    // Set language to support both English and Indonesian
-    recognition.lang = 'id-ID,en-US';
+    // Detect Safari
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    // Set language based on browser - Safari doesn't support multiple languages
+    if (isSafari) {
+      // Use single language for Safari
+      recognition.lang = navigator.language.startsWith('id') ? 'id-ID' : 'en-US';
+    } else {
+      recognition.lang = 'id-ID,en-US';
+    }
+    
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 3; // Get multiple alternatives to improve recognition
+    recognition.maxAlternatives = 1; // Safari might work better with fewer alternatives
+
+    // For Safari: set maximum duration
+    let timeoutId: NodeJS.Timeout;
+    const maxDuration = isSafari ? 8000 : 5000; // Back to original timeout
 
     recognition.onstart = () => {
       setIsListening(true);
       setVoiceText("Listening...");
+      
+      // Set timeout for Safari
+      timeoutId = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (error) {
+          console.log("Error stopping recognition:", error);
+        }
+      }, maxDuration);
     };
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase();
-      setVoiceText(`Heard: "${transcript}"`);
-      
-      // Process voice command (English and Indonesian)
-      // Check for auto mode commands
-      if (transcript.includes("auto") || transcript.includes("automatic") || 
-          transcript.includes("otomatis") || transcript.includes("putar otomatis") ||
-          transcript.includes("mode otomatis") || transcript.includes("mode auto")) {
-        handleModeChange("auto");
-        setVoiceText("Setting servo to auto mode");
-      } 
-      // Check for manual mode commands
-      else if (transcript.includes("manual") || transcript.includes("mode manual")) {
-        handleModeChange("manual");
-        setVoiceText("Setting servo to manual mode");
-      } 
-      // Try to extract angle
-      else {
-        // Try to extract angle from various speech patterns
-        let detectedAngle: number | null = null;
+      try {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        const confidence = event.results[0][0].confidence;
+        console.log(`Recognized: "${transcript}" (confidence: ${confidence})`);
         
-        // Pattern 1: Direct number patterns - extract any number in the transcript
-        const numberPattern = transcript.match(/(\d+)/);
-        if (numberPattern) {
-          detectedAngle = parseInt(numberPattern[1]);
+        setVoiceText(`Heard: "${transcript}"`);
+        
+        // Process voice command (English and Indonesian)
+        // Check for auto mode commands with more Indonesian variations
+        const autoPatterns = [
+          "auto", "automatic", "auto mode", "automatic mode",
+          "otomatis", "mode otomatis", "putar otomatis", "otomatis aja",
+          "otomatis saja", "mode auto", "auto aja", "auto saja"
+        ];
+        
+        const manualPatterns = [
+          "manual", "manual mode", "mode manual"
+        ];
+        
+        let commandFound = false;
+        
+        // Check for auto mode
+        for (const pattern of autoPatterns) {
+          if (transcript.includes(pattern)) {
+            handleModeChange("auto");
+            setVoiceText("Setting servo to auto mode");
+            commandFound = true;
+            break;
+          }
         }
         
-        // Pattern 2: Word to number conversion for common angles
-        if (!detectedAngle) {
-          const angleWords: { [key: string]: number } = {
-            // English words
-            'zero': 0, 'ten': 10, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
-            'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
-            'one hundred': 100, 'one twenty': 120, 'one fifty': 150,
-            'one eighty': 180, 'half': 90, 'full': 180,
-            // Indonesian numbers (written)
-            'nol': 0, 'sepuluh': 10, 'dua puluh': 20, 'tiga puluh': 30, 'empat puluh': 40, 
-            'lima puluh': 50, 'enam puluh': 60, 'tujuh puluh': 70, 'delapan puluh': 80, 
-            'sembilan puluh': 90, 'seratus': 100, 'seratus dua puluh': 120,
-            'seratus lima puluh': 150, 'seratus delapan puluh': 180,
-            'setengah': 90, 'penuh': 180,
-            // Alternative Indonesian spellings/pronunciations
-            'duapuluh': 20, 'tigapuluh': 30, 'empatpuluh': 40, 'limapuluh': 50,
-            'enampuluh': 60, 'tujuhpuluh': 70, 'delapanpuluh': 80, 'sembilanpuluh': 90
-          };
-          
-          for (const [word, angle] of Object.entries(angleWords)) {
-            if (transcript.includes(word)) {
-              detectedAngle = angle;
+        // Check for manual mode
+        if (!commandFound) {
+          for (const pattern of manualPatterns) {
+            if (transcript.includes(pattern)) {
+              handleModeChange("manual");
+              setVoiceText("Setting servo to manual mode");
+              commandFound = true;
               break;
             }
           }
         }
         
-        // If angle detected, execute the command
-        if (detectedAngle !== null && detectedAngle >= 0 && detectedAngle <= 180) {
-          setMode("manual");
-          setAngle(detectedAngle);
-          setInputAngle(detectedAngle.toString());
-          sendServoCommand(detectedAngle);
-          setVoiceText(`Setting servo to ${detectedAngle}°`);
-        } else if (detectedAngle !== null) {
-          setVoiceText(`Invalid angle: ${detectedAngle}°. Please use 0-180.`);
-        } else {
-          setVoiceText(`Command not recognized: "${transcript}"`);
+        // Try to extract angle if no mode command found
+        if (!commandFound) {
+          // Try to extract angle from various speech patterns
+          let detectedAngle: number | null = null;
+          
+          // Pattern 1: Direct number patterns - extract any number in the transcript
+          const numberPattern = transcript.match(/(\d+)/);
+          if (numberPattern) {
+            detectedAngle = parseInt(numberPattern[1]);
+          }
+          
+          // Pattern 2: Word to number conversion for common angles
+          if (!detectedAngle) {
+            const angleWords: { [key: string]: number } = {
+              // English words
+              'zero': 0, 'ten': 10, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
+              'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
+              'one hundred': 100, 'one twenty': 120, 'one fifty': 150,
+              'one eighty': 180, 'half': 90, 'full': 180,
+              // Indonesian numbers and variations
+              'nol': 0, 'kosong': 0,
+              'sepuluh': 10, 'se puluh': 10,
+              'dua puluh': 20, 'duapuluh': 20, 'dua belas': 12,
+              'tiga puluh': 30, 'tigapuluh': 30, 'tiga lima': 35,
+              'empat puluh': 40, 'empatpuluh': 40, 'empat lima': 45,
+              'lima puluh': 50, 'limapuluh': 50,
+              'enam puluh': 60, 'enampuluh': 60,
+              'tujuh puluh': 70, 'tujuhpuluh': 70, 'tujuh lima': 75,
+              'delapan puluh': 80, 'delapanpuluh': 80,
+              'sembilan puluh': 90, 'sembilanpuluh': 90,
+              'seratus': 100, 'se ratus': 100,
+              'seratus dua puluh': 120, 'seratus duapuluh': 120,
+              'seratus lima puluh': 150, 'seratus limapuluh': 150,
+              'seratus delapan puluh': 180, 'seratus delapanpuluh': 180,
+              'setengah': 90, 'tengah': 90, 'penuh': 180
+            };
+            
+            for (const [word, angle] of Object.entries(angleWords)) {
+              if (transcript.includes(word)) {
+                detectedAngle = angle;
+                break;
+              }
+            }
+          }
+          
+          // If angle detected, execute the command
+          if (detectedAngle !== null && detectedAngle >= 0 && detectedAngle <= 180) {
+            setMode("manual");
+            setAngle(detectedAngle);
+            setInputAngle(detectedAngle.toString());
+            sendServoCommand(detectedAngle);
+            setVoiceText(`Setting servo to ${detectedAngle}°`);
+          } else if (detectedAngle !== null) {
+            setVoiceText(`Invalid angle: ${detectedAngle}°. Please use 0-180.`);
+          } else {
+            setVoiceText(`Command not recognized: "${transcript}"`);
+          }
         }
+      } catch (error) {
+        console.log("Error processing result:", error);
+        setVoiceText("Error processing voice command");
+      }
+      
+      // Stop recognition after processing
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.log("Error stopping recognition:", error);
       }
     };
 
+    // Add a slight delay before stopping to ensure complete recognition
+    let speechEndTimeout: NodeJS.Timeout;
+    
+    recognition.onspeechend = () => {
+      // Wait a bit before stopping to ensure all speech is captured
+      speechEndTimeout = setTimeout(() => {
+        recognition.stop();
+      }, 500); // 500ms delay after speech ends
+    };
+
     recognition.onerror = (event: any) => {
-      setVoiceText(`Error: ${event.error}`);
+      console.log("Speech recognition error:", event.error, event);
+      
+      // Safari might throw 'no-speech' error if it doesn't detect speech
+      if (event.error === 'no-speech') {
+        setVoiceText("No speech detected. Please try again.");
+      } else if (event.error === 'audio-capture') {
+        setVoiceText("Microphone access denied. Please enable microphone.");
+      } else {
+        setVoiceText(`Error: ${event.error}`);
+      }
+      
       setIsListening(false);
+      clearTimeout(timeoutId);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      clearTimeout(timeoutId);
+      clearTimeout(speechEndTimeout);
+      // Clear voice text after delay
       setTimeout(() => setVoiceText(""), 3000);
     };
 
-    recognition.start();
+    // Start recognition
+    try {
+      recognition.start();
+    } catch (error) {
+      console.log("Error starting recognition:", error);
+      setIsListening(false);
+      setVoiceText("Error: Could not start voice recognition");
+    }
   };
 
   return (

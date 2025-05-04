@@ -49,48 +49,149 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
-    // Set language to support both Indonesian and English
-    recognition.lang = 'id-ID,en-US';
+    // Detect Safari
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    // Set language based on browser - Safari doesn't support multiple languages
+    if (isSafari) {
+      // Use single language for Safari
+      recognition.lang = navigator.language.startsWith('id') ? 'id-ID' : 'en-US';
+    } else {
+      recognition.lang = 'id-ID,en-US';
+    }
+    
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 3; // Get multiple alternatives to improve recognition
+    recognition.maxAlternatives = 1; // Safari might work better with fewer alternatives
+
+    // For Safari: set maximum duration
+    let timeoutId: NodeJS.Timeout;
+    const maxDuration = isSafari ? 8000 : 5000; // Back to original timeout
 
     recognition.onstart = () => {
       setIsListening(true);
       setVoiceText("Listening...");
+      
+      // Set timeout for Safari
+      timeoutId = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (error) {
+          console.log("Error stopping recognition:", error);
+        }
+      }, maxDuration);
     };
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase();
-      setVoiceText(`Heard: "${transcript}"`);
+      try {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        const confidence = event.results[0][0].confidence;
+        console.log(`Recognized: "${transcript}" (confidence: ${confidence})`);
+        
+        setVoiceText(`Heard: "${transcript}"`);
+        
+        // Process voice command (English and Indonesian)
+        // More comprehensive Indonesian patterns
+        const turnOnPatterns = [
+          "turn on", "led on", "on led", "on",
+          "nyalakan", "hidupkan", "nyala", "hidup",
+          "nyalain", "idupin", "nyalakan led", "hidupkan led",
+          "led nyala", "led hidup", "lampu nyala", "lampu hidup"
+        ];
+        
+        const turnOffPatterns = [
+          "turn off", "led off", "off led", "off",
+          "matikan", "padamkan", "mati", "padam",
+          "matiin", "padamin", "matikan led", "padamkan led",
+          "led mati", "led padam", "lampu mati", "lampu padam"
+        ];
+        
+        let commandFound = false;
+        
+        // Check for turn on commands
+        for (const pattern of turnOnPatterns) {
+          if (transcript.includes(pattern)) {
+            if (!ledState) {
+              toggleLed();
+            }
+            setVoiceText("Turning LED ON");
+            commandFound = true;
+            break;
+          }
+        }
+        
+        // Check for turn off commands if not already found
+        if (!commandFound) {
+          for (const pattern of turnOffPatterns) {
+            if (transcript.includes(pattern)) {
+              if (ledState) {
+                toggleLed();
+              }
+              setVoiceText("Turning LED OFF");
+              commandFound = true;
+              break;
+            }
+          }
+        }
+        
+        if (!commandFound) {
+          setVoiceText(`Command not recognized: "${transcript}"`);
+        }
+      } catch (error) {
+        console.log("Error processing result:", error);
+        setVoiceText("Error processing voice command");
+      }
       
-      // Process voice command (English and Indonesian)
-      if (transcript.includes("turn on") || transcript.includes("led on") || 
-          transcript.includes("nyalakan") || transcript.includes("hidupkan")) {
-        if (!ledState) {
-          toggleLed();
-        }
-      } else if (transcript.includes("turn off") || transcript.includes("led off") || 
-                 transcript.includes("matikan") || transcript.includes("padamkan")) {
-        if (ledState) {
-          toggleLed();
-        }
-      } else {
-        setVoiceText(`Command not recognized: "${transcript}"`);
+      // Stop recognition after processing
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.log("Error stopping recognition:", error);
       }
     };
 
+    // Add a slight delay before stopping to ensure complete recognition
+    let speechEndTimeout: NodeJS.Timeout;
+    
+    recognition.onspeechend = () => {
+      // Wait a bit before stopping to ensure all speech is captured
+      speechEndTimeout = setTimeout(() => {
+        recognition.stop();
+      }, 500); // 500ms delay after speech ends
+    };
+
     recognition.onerror = (event: any) => {
-      setVoiceText(`Error: ${event.error}`);
+      console.log("Speech recognition error:", event.error, event);
+      
+      // Safari might throw 'no-speech' error if it doesn't detect speech
+      if (event.error === 'no-speech') {
+        setVoiceText("No speech detected. Please try again.");
+      } else if (event.error === 'audio-capture') {
+        setVoiceText("Microphone access denied. Please enable microphone.");
+      } else {
+        setVoiceText(`Error: ${event.error}`);
+      }
+      
       setIsListening(false);
+      clearTimeout(timeoutId);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      clearTimeout(timeoutId);
+      clearTimeout(speechEndTimeout);
+      // Clear voice text after delay
       setTimeout(() => setVoiceText(""), 3000);
     };
 
-    recognition.start();
+    // Start recognition
+    try {
+      recognition.start();
+    } catch (error) {
+      console.log("Error starting recognition:", error);
+      setIsListening(false);
+      setVoiceText("Error: Could not start voice recognition");
+    }
   };
 
   return (
