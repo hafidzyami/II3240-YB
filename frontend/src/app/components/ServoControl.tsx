@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Socket } from "socket.io-client";
 
 interface ServoControlProps {
@@ -13,6 +13,9 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
   const [inputAngle, setInputAngle] = useState<string>("90");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [voiceText, setVoiceText] = useState<string>("");
+  const [voiceSupported, setVoiceSupported] = useState<boolean>(false);
 
   const handleModeChange = (newMode: "manual" | "auto") => {
     setMode(newMode);
@@ -111,16 +114,127 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
 
   // Removed - no longer need handleSliderRelease since we send on change
 
+  // Check if Web Speech API is supported
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      setVoiceSupported(true);
+    }
+  }, []);
+
+  const startVoiceControl = () => {
+    if (!voiceSupported) {
+      alert("Voice control is not supported in your browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    // Set language to support both English and Indonesian
+    recognition.lang = 'id-ID,en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3; // Get multiple alternatives to improve recognition
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceText("Listening...");
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      setVoiceText(`Heard: "${transcript}"`);
+      
+      // Process voice command (English and Indonesian)
+      // Check for auto mode commands
+      if (transcript.includes("auto") || transcript.includes("automatic") || 
+          transcript.includes("otomatis") || transcript.includes("putar otomatis") ||
+          transcript.includes("mode otomatis") || transcript.includes("mode auto")) {
+        handleModeChange("auto");
+        setVoiceText("Setting servo to auto mode");
+      } 
+      // Check for manual mode commands
+      else if (transcript.includes("manual") || transcript.includes("mode manual")) {
+        handleModeChange("manual");
+        setVoiceText("Setting servo to manual mode");
+      } 
+      // Try to extract angle
+      else {
+        // Try to extract angle from various speech patterns
+        let detectedAngle: number | null = null;
+        
+        // Pattern 1: Direct number patterns - extract any number in the transcript
+        const numberPattern = transcript.match(/(\d+)/);
+        if (numberPattern) {
+          detectedAngle = parseInt(numberPattern[1]);
+        }
+        
+        // Pattern 2: Word to number conversion for common angles
+        if (!detectedAngle) {
+          const angleWords: { [key: string]: number } = {
+            // English words
+            'zero': 0, 'ten': 10, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
+            'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
+            'one hundred': 100, 'one twenty': 120, 'one fifty': 150,
+            'one eighty': 180, 'half': 90, 'full': 180,
+            // Indonesian numbers (written)
+            'nol': 0, 'sepuluh': 10, 'dua puluh': 20, 'tiga puluh': 30, 'empat puluh': 40, 
+            'lima puluh': 50, 'enam puluh': 60, 'tujuh puluh': 70, 'delapan puluh': 80, 
+            'sembilan puluh': 90, 'seratus': 100, 'seratus dua puluh': 120,
+            'seratus lima puluh': 150, 'seratus delapan puluh': 180,
+            'setengah': 90, 'penuh': 180,
+            // Alternative Indonesian spellings/pronunciations
+            'duapuluh': 20, 'tigapuluh': 30, 'empatpuluh': 40, 'limapuluh': 50,
+            'enampuluh': 60, 'tujuhpuluh': 70, 'delapanpuluh': 80, 'sembilanpuluh': 90
+          };
+          
+          for (const [word, angle] of Object.entries(angleWords)) {
+            if (transcript.includes(word)) {
+              detectedAngle = angle;
+              break;
+            }
+          }
+        }
+        
+        // If angle detected, execute the command
+        if (detectedAngle !== null && detectedAngle >= 0 && detectedAngle <= 180) {
+          setMode("manual");
+          setAngle(detectedAngle);
+          setInputAngle(detectedAngle.toString());
+          sendServoCommand(detectedAngle);
+          setVoiceText(`Setting servo to ${detectedAngle}°`);
+        } else if (detectedAngle !== null) {
+          setVoiceText(`Invalid angle: ${detectedAngle}°. Please use 0-180.`);
+        } else {
+          setVoiceText(`Command not recognized: "${transcript}"`);
+        }
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      setVoiceText(`Error: ${event.error}`);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setTimeout(() => setVoiceText(""), 3000);
+    };
+
+    recognition.start();
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-300">
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 sm:mb-6">
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Servo Motor Control</h3>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Control servo motor angle (0-180°) or set to auto mode
+            Control servo motor angle (0-180°) or set to auto mode - Voice enabled
           </p>
         </div>
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={() => handleModeChange("manual")}
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
@@ -173,14 +287,14 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Or enter angle manually:
               </label>
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="number"
                   min="0"
                   max="180"
                   value={inputAngle}
                   onChange={handleAngleChange}
-                  className={`flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full sm:flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     error ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Enter angle (0-180)"
@@ -188,7 +302,7 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
                 <button
                   type="submit"
                   disabled={isLoading || !socket?.connected || !!error}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm text-white transition-all w-full sm:w-auto ${
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg font-medium text-sm text-white transition-all ${
                     isLoading || !socket?.connected || !!error
                       ? "bg-gray-400 cursor-not-allowed"
                       : "bg-blue-500 hover:bg-blue-600 active:scale-95"
@@ -211,7 +325,7 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
           </form>
 
           {/* Visual Representation */}
-          <div className="mt-4 sm:mt-6 flex justify-center">
+          <div className="mt-4 sm:mt-7 flex justify-center">
             <div className="relative w-32 h-32 sm:w-48 sm:h-48">
               {/* Base circle */}
               <div className="absolute inset-0 border-2 sm:border-4 border-gray-200 rounded-full" />
@@ -246,6 +360,36 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
         </div>
       )}
 
+      {/* Voice Control Button */}
+      {voiceSupported && (
+        <div className="mt-7 flex justify-center">
+          <button
+            onClick={startVoiceControl}
+            disabled={isListening || !socket?.connected}
+            className={`
+              w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 transform
+              ${isListening ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}
+              ${isListening || !socket?.connected ? "opacity-75 cursor-not-allowed" : "hover:scale-105 active:scale-95"}
+              shadow-lg hover:shadow-xl
+            `}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span>{isListening ? "Listening..." : "Voice Control"}</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Voice Feedback Text */}
+      {voiceText && (
+        <div className="mt-3 text-xs sm:text-sm text-gray-600 text-center">
+          {voiceText}
+        </div>
+      )}
+
       {/* Status Indicator */}
       <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm gap-2">
         <div className="flex items-center space-x-2">
@@ -258,6 +402,13 @@ const ServoControl: React.FC<ServoControlProps> = ({ socket }) => {
           Current: {mode === "auto" ? "Auto" : `${angle}°`}
         </div>
       </div>
+
+      {/* Voice Command Instructions */}
+      {voiceSupported && (
+        <div className="mt-3 text-center text-xs sm:text-sm text-gray-400">
+          🎤 Examples: "Set 90", "Putar 45", "Mode otomatis", "Sembilan puluh derajat"
+        </div>
+      )}
     </div>
   );
 };

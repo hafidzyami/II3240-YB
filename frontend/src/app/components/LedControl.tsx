@@ -49,10 +49,11 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
-    // Try to detect user's preferred language, fallback to English
-    recognition.lang = navigator.language.startsWith('id') ? 'id-ID' : 'en-US';
+    // Set language to support both Indonesian and English
+    recognition.lang = 'id-ID,en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
+    recognition.maxAlternatives = 3; // Get multiple alternatives to improve recognition
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -101,60 +102,62 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
             Toggle the LED on your IoT device - Use button or voice control
           </p>
         </div>
-        <button
-          onClick={toggleLed}
-          disabled={isLoading || !socket?.connected}
-          className={`
-            relative px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 transform w-full sm:w-auto
-            ${
-              ledState
-                ? "bg-green-500 hover:bg-green-600 text-white shadow-green-200"
-                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-            }
-            ${isLoading ? "opacity-75 cursor-not-allowed" : "hover:scale-105 active:scale-95"}
-            ${!socket?.connected ? "opacity-50 cursor-not-allowed" : ""}
-            shadow-lg hover:shadow-xl
-          `}
-        >
-          <div className="flex items-center space-x-2">
-            {/* LED Indicator */}
-            <div className={`
-              w-3 h-3 rounded-full transition-all duration-300
-              ${ledState ? "bg-white animate-pulse" : "bg-gray-500"}
-            `} />
-            
-            {/* Button Text */}
-            <span>{ledState ? "Turn OFF" : "Turn ON"}</span>
-            
-            {/* Loading Spinner */}
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </div>
-        </button>
-        
-        {/* Voice Control Button */}
-        {voiceSupported && (
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={startVoiceControl}
-            disabled={isListening || !socket?.connected}
+            onClick={toggleLed}
+            disabled={isLoading || !socket?.connected}
             className={`
-              px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 transform w-full sm:w-auto mt-4 sm:mt-0
-              ${isListening ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}
-              ${isListening || !socket?.connected ? "opacity-75 cursor-not-allowed" : "hover:scale-105 active:scale-95"}
+              relative px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 transform w-full sm:w-auto
+              ${
+                ledState
+                  ? "bg-green-500 hover:bg-green-600 text-white shadow-green-200"
+                  : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+              }
+              ${isLoading ? "opacity-75 cursor-not-allowed" : "hover:scale-105 active:scale-95"}
+              ${!socket?.connected ? "opacity-50 cursor-not-allowed" : ""}
               shadow-lg hover:shadow-xl
             `}
           >
             <div className="flex items-center justify-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-              <span>{isListening ? "Listening..." : "Voice Control"}</span>
+              {/* LED Indicator */}
+              <div className={`
+                w-3 h-3 rounded-full transition-all duration-300
+                ${ledState ? "bg-white animate-pulse" : "bg-gray-500"}
+              `} />
+              
+              {/* Button Text */}
+              <span>{ledState ? "Turn OFF" : "Turn ON"}</span>
+              
+              {/* Loading Spinner */}
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
           </button>
-        )}
+          
+          {/* Voice Control Button */}
+          {voiceSupported && (
+            <button
+              onClick={startVoiceControl}
+              disabled={isListening || !socket?.connected}
+              className={`
+                px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 transform w-full sm:w-auto
+                ${isListening ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}
+                ${isListening || !socket?.connected ? "opacity-75 cursor-not-allowed" : "hover:scale-105 active:scale-95"}
+                shadow-lg hover:shadow-xl
+              `}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                <span>{isListening ? "Listening..." : "Voice Control"}</span>
+              </div>
+            </button>
+          )}
+        </div>
       </div>
       
       {/* Voice Feedback Text */}
@@ -177,7 +180,7 @@ const LedControl: React.FC<LedControlProps> = ({ socket }) => {
         </div>
         {voiceSupported && (
           <div className="mt-2 sm:mt-0 text-xs sm:text-sm text-gray-500">
-            🎤 Say "Turn on/off LED" or "Nyalakan/Matikan LED"
+            🎤 Examples: "Turn on", "Turn off", "Nyalakan", "Matikan"
           </div>
         )}
       </div>
