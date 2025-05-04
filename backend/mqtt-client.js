@@ -3,7 +3,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // MQTT Configuration
-const MQTT_BROKER = 'mqtt://mqtt.eclipseprojects.io';
+const MQTT_BROKER = 'mqtt://reksti.profybandung.cloud';
 const MQTT_TOPIC = 'reksti-yb/data';
 const API_URL = `http://localhost:${process.env.PORT || 8000}/api/iot`;
 
