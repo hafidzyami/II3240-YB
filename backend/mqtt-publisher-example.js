@@ -1,6 +1,6 @@
 const mqtt = require('mqtt');
 
-const MQTT_BROKER = 'mqtt://mqtt.eclipseprojects.io';
+const MQTT_BROKER = 'mqtt://reksti.profybandung.cloud';
 const MQTT_TOPIC = 'reksti-yb/data';
 
 const client = mqtt.connect(MQTT_BROKER);
