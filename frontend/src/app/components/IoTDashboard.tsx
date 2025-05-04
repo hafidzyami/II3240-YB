@@ -57,10 +57,16 @@ const IoTDashboard: React.FC = () => {
       // Use environment variable or dynamic host
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
                        (typeof window !== 'undefined' 
-                         ? `${window.location.protocol}//${window.location.hostname}:8000` 
+                         ? `${window.location.origin}` 
                          : 'http://localhost:8000');
       
-      const newSocket = io(socketUrl);
+      const newSocket = io(socketUrl, {
+        path: '/socket.io/',
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
 
       newSocket.on("connect", () => {
         console.log("Connected to Socket.IO server");

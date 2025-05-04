@@ -6,8 +6,9 @@ const getApiBaseUrl = (): string => {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
+  // Use empty string for relative paths when using proxy
   if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:8000`;
+    return '';
   }
   
   return 'http://localhost:8000';
