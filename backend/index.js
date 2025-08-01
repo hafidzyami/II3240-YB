@@ -577,7 +577,7 @@ app.post('/api/led/control', (req, res) => {
     }
     
     // Publish to MQTT
-    mqttClient.publish('reksti-yb/led', state.toString(), (err) => {
+    mqttClient.publish('miotybhs/led', state.toString(), (err) => {
       if (err) {
         console.error('Failed to publish LED command:', err);
         return res.status(500).json({ error: 'Failed to publish LED command' });
@@ -631,5 +631,5 @@ server.listen(port, () => {
   console.log(`IoT Backend API running on port ${port}`);
   console.log(`API Documentation available at http://localhost:${port}/api-docs`);
   console.log(`Socket.IO server running on http://localhost:${port}`);
-  console.log(`MQTT client connected to topic: reksti-yb`);
+  console.log(`MQTT client connected to topic: miotybhs`);
 });
