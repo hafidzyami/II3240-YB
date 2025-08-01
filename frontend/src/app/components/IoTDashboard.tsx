@@ -173,7 +173,7 @@ const IoTDashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">
-                {latestData.altitude.toFixed(1)}%
+                {latestData.altitude.toFixed(1)}m
               </div>
               <div className="text-xs sm:text-sm text-gray-500 mt-1">Altitude</div>
             </div>
@@ -225,7 +225,7 @@ const IoTDashboard: React.FC = () => {
           backgroundColor="rgba(34, 197, 94, 0.1)"
           gradientFrom="rgba(34, 197, 94, 0.05)"
           gradientTo="rgba(34, 197, 94, 0.2)"
-          unit="%"
+          unit="m"
         />
         <AnimatedRealtimeChart
           data={dataHistory}
