@@ -105,15 +105,15 @@ client.on('message', async (topic, message) => {
     }
     
     // Validate the data
-    if (!data.humidity || !data.pressure || !data.temperature) {
-      console.error('Invalid message format. Required fields: humidity, pressure, temperature');
+    if (!data.altitude || !data.pressure || !data.temperature) {
+      console.error('Invalid message format. Required fields: altitude, pressure, temperature');
       return;
     }
     
     // Post to API
     try {
       const response = await axios.post(API_URL, {
-        humidity: data.humidity,
+        altitude: data.altitude,
         pressure: data.pressure,
         temperature: data.temperature
       });

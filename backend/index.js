@@ -62,10 +62,10 @@ const swaggerOptions = {
               format: 'int64',
               description: 'Unique identifier'
             },
-            humidity: {
+            altitude: {
               type: 'number',
               format: 'float',
-              description: 'Humidity percentage'
+              description: 'altitude percentage'
             },
             pressure: {
               type: 'number',
@@ -86,12 +86,12 @@ const swaggerOptions = {
         },
         IoTDataInput: {
           type: 'object',
-          required: ['humidity', 'pressure', 'temperature'],
+          required: ['altitude', 'pressure', 'temperature'],
           properties: {
-            humidity: {
+            altitude: {
               type: 'number',
               format: 'float',
-              description: 'Humidity percentage'
+              description: 'altitude percentage'
             },
             pressure: {
               type: 'number',
@@ -234,11 +234,11 @@ app.get('/ws/status', (req, res) => {
  */
 app.post('/api/iot', async (req, res) => {
   try {
-    const { humidity, pressure, temperature } = req.body;
+    const { altitude, pressure, temperature } = req.body;
 
-    if (!humidity || !pressure || !temperature) {
+    if (!altitude || !pressure || !temperature) {
       return res.status(400).json({ 
-        error: 'Missing required fields: humidity, pressure, or temperature' 
+        error: 'Missing required fields: altitude, pressure, or temperature' 
       });
     }
 
@@ -246,7 +246,7 @@ app.post('/api/iot', async (req, res) => {
       .from('iot')
       .insert([
         {
-          humidity: parseFloat(humidity),
+          altitude: parseFloat(altitude),
           pressure: parseFloat(pressure),
           temperature: parseFloat(temperature),
           timestamp: new Date().toISOString()

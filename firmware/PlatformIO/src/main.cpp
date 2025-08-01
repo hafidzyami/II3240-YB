@@ -16,7 +16,7 @@ const int mqtt_port = 1883;
 // MQTT Topics
 const char* led_topic = "miotybhs/led";
 const char* servo_topic = "miotybhs/servo";
-const char* sensor_topic = "miotybhs/sensor";
+const char* sensor_topic = "miotybhs/data";
 
 // Pin definitions - Using available pins
 const int LED_PIN = 25;      // Using GPIO 25 for LED

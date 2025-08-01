@@ -11,7 +11,7 @@ client.on('connect', () => {
   // Publish random data every 1 second
   const interval = setInterval(() => {
     const sensorData = {
-      humidity: parseFloat((Math.random() * 100).toFixed(2)),       // 0 - 100%
+      altitude: parseFloat((Math.random() * 100).toFixed(2)),       // 0 - 100%
       pressure: parseFloat((950 + Math.random() * 100).toFixed(2)), // 950 - 1050 hPa
       temperature: parseFloat((20 + Math.random() * 15).toFixed(2)) // 20 - 35 °C
     };

@@ -173,9 +173,9 @@ const IoTDashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">
-                {latestData.humidity.toFixed(1)}%
+                {latestData.altitude.toFixed(1)}%
               </div>
-              <div className="text-xs sm:text-sm text-gray-500 mt-1">Humidity</div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-1">Altitude</div>
             </div>
             <div className="text-center">
               <div className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600">
@@ -219,8 +219,8 @@ const IoTDashboard: React.FC = () => {
         />
         <AnimatedRealtimeChart
           data={dataHistory}
-          dataKey="humidity"
-          label="Humidity"
+          dataKey="altitude"
+          label="Altitude"
           borderColor="#22c55e"
           backgroundColor="rgba(34, 197, 94, 0.1)"
           gradientFrom="rgba(34, 197, 94, 0.05)"

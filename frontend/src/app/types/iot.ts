@@ -1,6 +1,6 @@
 export interface IoTData {
   id: number;
-  humidity: number;
+  altitude : number;
   pressure: number;
   temperature: number;
   timestamp: string;

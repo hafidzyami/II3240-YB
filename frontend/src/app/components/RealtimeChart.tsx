@@ -31,7 +31,7 @@ ChartJS.register(
 
 interface RealtimeChartProps {
   data: IoTData[];
-  dataKey: keyof Pick<IoTData, 'temperature' | 'humidity' | 'pressure'>;
+  dataKey: keyof Pick<IoTData, 'temperature' | 'altitude' | 'pressure'>;
   label: string;
   borderColor: string;
   backgroundColor: string;
