@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "II3240 - YB",
+  title: "IoT by YB & HS",
   description: "Real-time IoT sensor monitoring dashboard",
   icons: {
     icon: [

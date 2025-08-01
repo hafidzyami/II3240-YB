@@ -524,8 +524,8 @@ app.get('/api/iot/range', async (req, res) => {
 app.get('/mqtt/status', (req, res) => {
     res.json({
       connected: mqttClient.connected,
-      broker: 'mqtt://mqtt.eclipseprojects.io',
-      topic: 'reksti-yb'
+      broker: 'mqtt://iot.profybandung.cloud',
+      topic: 'miotybhs/data'
     });
   });
 

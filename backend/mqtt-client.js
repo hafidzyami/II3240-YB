@@ -3,8 +3,8 @@ const axios = require('axios');
 require('dotenv').config();
 
 // MQTT Configuration
-const MQTT_BROKER = 'mqtt://reksti.profybandung.cloud';
-const MQTT_TOPIC = 'reksti-yb/data';
+const MQTT_BROKER = 'mqtt://iot.profybandung.cloud';
+const MQTT_TOPIC = 'miotybhs/data';
 const API_URL = `http://localhost:${process.env.PORT || 8000}/api/iot`;
 
 // WebSocket server reference (will be set from index.js)
@@ -20,11 +20,11 @@ function setWebSocketServer(server) {
       console.log('Publishing LED command to MQTT:', data);
       
       // Publish to MQTT topic
-      client.publish('reksti-yb/led', data.state.toString(), (err) => {
+      client.publish('miotybhs/led', data.state.toString(), (err) => {
         if (err) {
           console.error('Failed to publish LED command:', err);
         } else {
-          console.log('LED command published successfully to reksti-yb/led');
+          console.log('LED command published successfully to miotybhs/led');
         }
       });
     });
@@ -36,11 +36,11 @@ function setWebSocketServer(server) {
       console.log('Publishing Servo command to MQTT:', data);
       
       // Publish to MQTT topic
-      client.publish('reksti-yb/servo', data.angle.toString(), (err) => {
+      client.publish('miotybhs/servo', data.angle.toString(), (err) => {
         if (err) {
           console.error('Failed to publish Servo command:', err);
         } else {
-          console.log('Servo command published successfully to reksti-yb/servo with angle:', data.angle);
+          console.log('Servo command published successfully to miotybhs/servo with angle:', data.angle);
         }
       });
     });
@@ -69,11 +69,11 @@ client.on('connect', () => {
   });
   
   // Also subscribe to LED feedback topic if needed
-  client.subscribe('reksti-yb/led/feedback', (err) => {
+  client.subscribe('miotybhs/led/feedback', (err) => {
     if (err) {
       console.error('Subscribe to LED feedback error:', err);
     } else {
-      console.log('Subscribed to topic: reksti-yb/led/feedback');
+      console.log('Subscribed to topic: miotybhs/led/feedback');
     }
   });
 });
